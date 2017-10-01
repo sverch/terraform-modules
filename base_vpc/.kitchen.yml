@@ -1,0 +1,35 @@
+---
+
+<%
+require 'aws-sdk'
+aws_account_id = Aws::IAM::Resource.new(:region => 'us-east-1').current_user.arn.split(":")[4]
+%>
+
+driver:
+  name: terraform
+  directory: test/fixture
+  variable_files:
+    - test/fixture/testing.tfvars
+  backend_configurations:
+    encrypt: "true"
+    bucket: "sverch-test-terraform-state-<%= aws_account_id %>"
+    key: "test-kitchen/terraform.tfstate"
+    region: "us-east-1"
+    dynamodb_table: "terraform-locks"
+
+provisioner:
+  name: terraform
+
+platforms:
+  - name: ubuntu
+
+verifier:
+  name: awspec
+
+suites:
+  - name: default
+    verifier:
+      name: awspec
+      patterns:
+        - spec/*_spec.rb
+      default_path: "spec"
