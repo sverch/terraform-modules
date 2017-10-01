@@ -1,4 +1,9 @@
-# Example VPC instantiation
+# Example VPC Module
 
-Need to create a file in spec/secrets.yml with the "region" attribute set, or
-export the `AWS_REGION` environment variable.
+This module creates a simple VPC, with an "environment" tag with the environment
+name, and a "Name" tag that also has the environment name, because awspec needs
+this to discover it.
+
+## Testing
+
+See [Testing](../README.md#testing) for details.
