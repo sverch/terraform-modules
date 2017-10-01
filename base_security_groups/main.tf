@@ -14,6 +14,7 @@ data "aws_vpc" "base" {
 }
 
 resource "aws_security_group" "base" {
+    name        = "base"
     description = "Allow all traffic"
     vpc_id     = "${data.aws_vpc.base.id}"
 
