@@ -7,8 +7,9 @@ terraform {
 }
 
 data "aws_vpc" "base" {
-    tags = {
-        environment = "${var.env_name}"
+    filter {
+        name = "tag:environment"
+        values = ["${var.env_name}"]
     }
 }
 
