@@ -1,0 +1,41 @@
+---
+<%
+require 'aws-sdk'
+require 'securerandom'
+
+test_region = ENV.fetch("TEST_KITCHEN_AWS_REGION", "us-east-1")
+aws_account_id = Aws::IAM::Resource.new(:region => test_region).current_user.arn.split(":")[4]
+env_name = ENV.fetch("TEST_KITCHEN_ENVIRONMENT_NAME", "test-kitchen-#{File.basename(Dir.pwd)}")
+%>
+
+driver:
+  name: terraform
+  directory: test/fixture
+  variables:
+    env_name: "<%= env_name %>"
+  backend_configurations:
+    encrypt: "true"
+    bucket: "sverch-test-terraform-state-<%= aws_account_id %>"
+    key: "integration-tests/<%= env_name %>/terraform.tfstate"
+    region: "<%= test_region %>"
+    dynamodb_table: "terraform-locks"
+
+provisioner:
+  name: terraform
+
+platforms:
+  - name: ubuntu
+
+verifier:
+  name: awspec
+
+suites:
+  - name: default
+    verifier:
+      name: awspec
+      patterns:
+        - spec/*_spec.rb
+      default_path: "spec"
+      env_vars:
+        AWSPEC_ENVIRONMENT_NAME: "<%= env_name %>"
+        AWS_REGION: "<%= test_region %>"
