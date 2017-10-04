@@ -25,3 +25,13 @@ resource "aws_internet_gateway" "base" {
         environment = "${var.env_name}"
     }
 }
+
+data "aws_route_table" "base" {
+    vpc_id = "${data.aws_vpc.base.id}"
+}
+
+resource "aws_route" "base" {
+    route_table_id = "${data.aws_route_table.base.route_table_id}"
+    destination_cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.base.id}"
+}
