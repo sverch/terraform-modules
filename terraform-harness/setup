@@ -15,8 +15,25 @@ Usage: $0
     directory this script is in to that module.
 
     This script assumes that you have the directory containing the terraform
-    module in the same directory as the directory containing the boilerplate
+    module in the same directory as the directory containing this boilerplate
     code.
+
+    Example:
+      \$ basename \$PWD
+      terraform-harness
+      \$ cd .. && mkdir new_module && cd new_module
+      \$ ../terraform-harness/setup
+      + ln -s ../terraform-harness/Gemfile Gemfile
+      + ln -s ../terraform-harness/Gemfile.lock Gemfile.lock
+      + ln -s ../../terraform-harness/spec/spec_helper.rb spec/spec_helper.rb
+      + ln -s ../terraform-harness/.rspec .rspec
+      + cp -r ../terraform-harness/spec/tests spec/tests
+      + ln -s ../../terraform-harness/fixture/terraform.tfvars fixture/terraform.tfvars
+      + cp -r ../terraform-harness/fixture/test fixture/test
+      + ln -s ../terraform-harness/test test
+      + cp -r ../terraform-harness/main.tf main.tf
+      + cp -r ../terraform-harness/variables.tf variables.tf
+      + cp -r ../terraform-harness/outputs.tf outputs.tf
 
 EOF
 }
