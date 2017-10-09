@@ -1,0 +1,124 @@
+#!/bin/bash
+
+set -euo pipefail
+
+run () {
+    echo "+" "$@" 1>&2
+    "$@"
+}
+
+usage () {
+    cat <<EOF
+Usage: $0 <create|configure|validate|destroy|full-cycle>
+
+  Runner script for all the stages necessary to test a Terraform module with a
+  Terragrunt based test fixture.
+
+    create:     uses Terragrunt to spin up the environment in ./fixture
+    validate:   runs awspec tests against the environment
+    destroy:    uses Terragrunt to destroy the environment in ./fixture
+    full-cycle: destroy, create, validate, and destroy
+
+  This is modeled after Test Kitchen, and eventually should be a real tool, but
+  for now is enough shim to get started.  See
+  https://github.com/newcontext-oss/kitchen-terraform for inspiration.
+
+  This fixture assumes that your module takes an "environment_name" variable
+  that represents which environment (dev, qa, prod, etc.) the module is being
+  deployed in.  This script will generate an environment name unique to you and
+  to this module, but you can override it with the
+  TERRAFORM_HARNESS_ENVIRONMENT_NAME environment variable.
+
+  It also assumes that your module takes an "aws_region" environment variable,
+  specifying the region to deploy in.  This defaults to "us-east-1" but can be
+  overridden with the TERRAFORM_HARNESS_AWS_REGION environment variable.
+
+EOF
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+COMMAND=$1
+
+export TERRAGRUNT_FIXTURE_DIRECTORY="${TERRAGRUNT_FIXTURE_DIRECTORY:-./fixture}"
+
+# https://stackoverflow.com/a/3915420
+realpath () {
+    echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+}
+
+MODULE_NAME="$(basename "$(dirname "$(realpath "$0")")")"
+export TF_VAR_environment_name="${TERRAFORM_HARNESS_ENVIRONMENT_NAME:-test-kitchen-"$MODULE_NAME"-"$(whoami)"}"
+export TF_VAR_aws_region="${TERRAFORM_HARNESS_AWS_REGION:-us-east-1}"
+
+create () {
+    run terragrunt apply-all \
+        --terragrunt-non-interactive \
+        --terragrunt-source-update \
+        --terragrunt-working-dir "$TERRAGRUNT_FIXTURE_DIRECTORY"
+}
+
+validate () {
+    run bundle install
+    run bundle exec env AWSPEC_ENVIRONMENT_NAME="$TF_VAR_environment_name" \
+                        AWSPEC_AWS_REGION="$TF_VAR_aws_region" rspec
+}
+
+destroy () {
+    run terragrunt destroy-all \
+        --terragrunt-non-interactive \
+        --terragrunt-ignore-dependency-errors \
+        --terragrunt-working-dir "$TERRAGRUNT_FIXTURE_DIRECTORY"
+}
+
+# Need to ignore errors here because this destroy is designed to clean up before
+# the test in case there's something there, but the destroy might fail if we're
+# trying to destroy modules that don't have their dependent resources created.
+#
+# TODO: Find a way to do this that allows us to still catch legitimate errors.
+#
+# Here's what the error looks like:
+#
+#   [terragrunt] [/home/example/fixture/example/example_subnets] 2017/10/08 09:03:28 Running command: terraform destroy -force -input=false
+#   data.aws_vpc.example: Refreshing state...
+#   Error refreshing state: 1 error(s) occurred:
+#
+#   * data.aws_vpc.example: 1 error(s) occurred:
+#
+#   * data.aws_vpc.example: data.aws_vpc.example: no matching VPC found
+#
+initial-destroy () {
+    set +e
+    run destroy
+    set -e
+}
+
+full-cycle () {
+    run initial-destroy
+    run create
+    run validate
+    run destroy
+}
+
+case $COMMAND in
+    create)
+        create
+        ;;
+    validate)
+        validate
+        ;;
+    destroy)
+        destroy
+        ;;
+    full-cycle)
+        full-cycle
+        ;;
+    *)
+        echo "Unrecognized command: $COMMAND"
+        usage
+        exit 1
+        ;;
+esac

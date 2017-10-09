@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -euo pipefail
+
+run () {
+    echo "+" "$@" 1>&2
+    "$@"
+}
+
+usage () {
+    cat <<EOF
+Usage: $0
+
+    Run this from within a Terraform module to add the boilerplate from the
+    directory this script is in to that module.
+
+    This script assumes that you have the directory containing the terraform
+    module in the same directory as the directory containing the boilerplate
+    code.
+
+EOF
+}
+
+if [[ $# -ne 0 ]]; then
+    usage
+    exit 1
+fi
+
+TERRAFORM_HARNESS_DIRECTORY="$(basename "$(dirname "$0")")"
+
+copy_example () {
+    if [[ ! -e "$1" ]]; then
+        run cp -r "$(dirname "$0")/$1" "$1"
+    fi
+}
+
+make_symlink () {
+    if [[ ! -e "$1" ]]; then
+        run ln -s "../$TERRAFORM_HARNESS_DIRECTORY/$1" "$1"
+    fi
+}
+
+make_symlink_subdirectory () {
+    if [[ ! -e "$1" ]]; then
+        run ln -s "../../$TERRAFORM_HARNESS_DIRECTORY/$1" "$1"
+    fi
+}
+
+# awspec
+make_symlink Gemfile
+make_symlink Gemfile.lock
+mkdir -p spec
+make_symlink_subdirectory spec/spec_helper.rb
+make_symlink .rspec
+copy_example spec/tests
+mkdir -p fixture
+make_symlink_subdirectory fixture/terraform.tfvars
+copy_example fixture/test
+
+# runner
+make_symlink test
+
+# example module
+copy_example main.tf
+copy_example variables.tf
+copy_example outputs.tf

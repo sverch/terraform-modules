@@ -1,1 +1,0 @@
-../../module_test_boilerplate/spec/spec_helper.rb

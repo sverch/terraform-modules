@@ -1,7 +1,0 @@
-source 'https://rubygems.org/' do
-  gem 'test-kitchen'
-  gem 'awspec'
-  gem 'kitchen-verifier-awspec'
-  # We need v2.0.0 because it's compatible with the latest terraform
-  gem 'kitchen-terraform', :git => 'https://github.com/newcontext-oss/kitchen-terraform.git', :branch => 'v2.0.0'
-end

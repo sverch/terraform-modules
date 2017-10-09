@@ -1,0 +1,1 @@
+../../terraform-harness/fixture/terraform.tfvars
